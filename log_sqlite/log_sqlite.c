@@ -46,7 +46,7 @@ int log_initialize()
 	}
 	int name_length = pos_point - pos_slash - 1;
 	memmove(buffer, buffer + pos_slash + 1, name_length);
-	strcpy(buffer + name_length, ".log");
+	strcpy(buffer + name_length, ".log.db");
 	int ret = sqlite3_open(buffer, &sqlite3_t);
 	if (ret != SQLITE_OK) goto err;
 	sqlite3_exec(sqlite3_t, "pragma journal_mode = wal;", 0, 0, 0);
