@@ -1,0 +1,8 @@
+EXPORTS
+	log_initialize
+	log_close
+	log_debug
+	log_info
+	log_warning
+	log_critical
+	log_fatal
