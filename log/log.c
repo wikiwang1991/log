@@ -11,11 +11,11 @@ log_func _log_fatal = log_null;
 #ifdef WIN32
 #include <Windows.h>
 
-static HMODULE hDll = 0;
+static HMODULE hDll;
 
 void log_initialize()
 {
-	hDll = LoadLibrary(TEXT("log.dll"));
+	hDll = LoadLibrary("log.dll");
 	if (!hDll) return;
 	void *p;
 	p = GetProcAddress(hDll, "log_initialize");
@@ -49,11 +49,19 @@ void log_close()
 #else
 #include <dlfcn.h>
 
+static void *h;
+
 void log_initialize()
 {
-	void *h = dlopen("log.so", RTLD_LAZY);
+	h = dlopen("liblog.so", RTLD_LAZY);
 	if (!h) return;
 	void *p;
+	p = dlsym(h, "log_initialize");
+	int (*i)() = p;
+	if (!i || i()) {
+		dlclose(h);
+		return;
+	}
 	p = dlsym(h, "log_debug");
 	if (p) _log_debug = p;
 	p = dlsym(h, "log_info");
@@ -64,5 +72,15 @@ void log_initialize()
 	if (p) _log_critical = p;
 	p = dlsym(h, "log_fatal");
 	if (p) _log_fatal = p;
+}
+
+void log_close()
+{
+	void *p;
+	p = dlsym(h, "log_close");
+	if (!p) return;
+	void (*i)() = p;
+	i();
+	dlclose(h);
 }
 #endif

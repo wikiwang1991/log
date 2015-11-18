@@ -12,6 +12,10 @@
 
 CRITICAL_SECTION cs;
 #else
+#include <pthread.h>
+#include <unistd.h>
+
+pthread_mutex_t mutex;
 #endif
 
 static int reference_count = 0;
@@ -23,27 +27,26 @@ int log_initialize()
 	if (reference_count) goto noerr;
 	char buffer[BUFFER_SIZE];
 #ifdef WIN32
+	DWORD len;
+	len = GetModuleFileName(0, buffer, BUFFER_SIZE);
+	if (!len) return -1;
 	InitializeCriticalSection(&cs);
-	if (!GetModuleFileNameA(0, buffer, BUFFER_SIZE))
-		return -1;
 #else
+	ssize_t len = readlink("/proc/self/exe", buffer, BUFFER_SIZE);
+	if (len <= 0) return -1;
+	pthread_mutex_init(&mutex, 0);
 #endif
 	int pos_slash, pos_point;
-	for (int i = 0; i < BUFFER_SIZE; ++i) {
+	for (int i = 0; i < len; ++i)
 		switch (buffer[i]) {
 		case '\\':
+		case '/':
 			pos_slash = i;
 			break;
 		case '.':
 			pos_point = i;
 			break;
-		case '\0':
-			goto tag_break;
 		}
-		continue;
-	tag_break:
-		break;
-	}
 	int name_length = pos_point - pos_slash - 1;
 	memmove(buffer, buffer + pos_slash + 1, name_length);
 	strcpy(buffer + name_length, ".log.db");
@@ -78,6 +81,11 @@ void log_close()
 	if (--reference_count) return;
 	sqlite3_finalize(sqlite3_stmt_t);
 	sqlite3_close(sqlite3_t);
+#ifdef WIN32
+	DeleteCriticalSection(&cs);
+#else
+	pthread_mutex_destroy(&mutex);
+#endif
 }
 
 static inline void lock()
@@ -85,6 +93,7 @@ static inline void lock()
 #ifdef WIN32
 	EnterCriticalSection(&cs);
 #else
+	pthread_mutex_lock(&mutex);
 #endif
 }
 
@@ -93,6 +102,7 @@ static inline void unlock()
 #ifdef WIN32
 	LeaveCriticalSection(&cs);
 #else
+	pthread_mutex_unlock(&mutex);
 #endif
 }
 
