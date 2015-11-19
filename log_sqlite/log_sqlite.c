@@ -1,6 +1,7 @@
 #include "sqlite3.h"
 #include <time.h>
 #include <stdio.h>
+#include <string.h>
 
 #define LOG_ARGS const char *function, int line, const char *fmt, ...
 #define BUFFER_SIZE 1024
@@ -36,7 +37,7 @@ int log_initialize()
 	if (len <= 0) return -1;
 	pthread_mutex_init(&mutex, 0);
 #endif
-	int pos_slash, pos_point;
+	int pos_slash, pos_point = len;
 	for (int i = 0; i < len; ++i)
 		switch (buffer[i]) {
 		case '\\':

@@ -1,11 +1,11 @@
 #include "../log/log.h"
-#include "../test_dll/test_dll.h"
+//#include "../test_dll/test_dll.h"
 
 int main()
 {
 	int i = 0;
 	log_initialize();
-	test_dll();
+//	test_dll();
 
 	log_debug("Hello debug %d\n", i++);
 	log_info("Hello info %d\n", i++);
@@ -15,9 +15,8 @@ int main()
 
 //	test_dll();
 
-	system("pause");
-
 	log_close();
 
 	return 0;
 }
+
