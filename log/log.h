@@ -7,21 +7,21 @@ typedef void (*log_func)(LOG_ARGS);
 extern "C" {
 #endif
 
-extern log_func _log_debug;
-extern log_func _log_info;
-extern log_func _log_warning;
-extern log_func _log_critical;
-extern log_func _log_fatal;
+extern log_func _log_debug_0_0;
+extern log_func _log_info_0_0;
+extern log_func _log_warning_0_0;
+extern log_func _log_critical_0_0;
+extern log_func _log_fatal_0_0;
 
-void log_initialize();
+int log_initialize(const char *file);
 void log_close();
 
 #ifdef __cplusplus
 }
 #endif
 
-#define log_debug(fmt, ...) _log_debug(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_info(fmt, ...) _log_info(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_warning(fmt, ...) _log_warning(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_critical(fmt, ...) _log_critical(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_fatal(fmt, ...) _log_fatal(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_debug(fmt, ...) _log_debug_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_info(fmt, ...) _log_info_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_warning(fmt, ...) _log_warning_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_critical(fmt, ...) _log_critical_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_fatal(fmt, ...) _log_fatal_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)

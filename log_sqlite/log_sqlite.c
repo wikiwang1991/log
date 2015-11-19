@@ -23,34 +23,37 @@ static int reference_count = 0;
 static sqlite3 *sqlite3_t;
 static sqlite3_stmt *sqlite3_stmt_t;
 
-int log_initialize()
+int log_initialize(const char *file)
 {
 	if (reference_count) goto noerr;
 	char buffer[BUFFER_SIZE];
+	if (file) strcpy(buffer, file);
+	else {
 #ifdef WIN32
-	DWORD len;
-	len = GetModuleFileName(0, buffer, BUFFER_SIZE);
-	if (!len) return -1;
-	InitializeCriticalSection(&cs);
+		DWORD len;
+		len = GetModuleFileName(0, buffer, BUFFER_SIZE);
+		if (!len) return -1;
+		InitializeCriticalSection(&cs);
 #else
-	ssize_t len = readlink("/proc/self/exe", buffer, BUFFER_SIZE);
-	if (len <= 0) return -1;
-	pthread_mutex_init(&mutex, 0);
+		ssize_t len = readlink("/proc/self/exe", buffer, BUFFER_SIZE);
+		if (len <= 0) return -1;
+		pthread_mutex_init(&mutex, 0);
 #endif
-	int pos_slash, pos_point = len;
-	for (int i = 0; i < len; ++i)
-		switch (buffer[i]) {
-		case '\\':
-		case '/':
-			pos_slash = i;
-			break;
-		case '.':
-			pos_point = i;
-			break;
+		int pos_slash, pos_point = len;
+		for (int i = 0; i < len; ++i)
+			switch (buffer[i]) {
+			case '\\':
+			case '/':
+				pos_slash = i;
+				break;
+			case '.':
+				pos_point = i;
+				break;
 		}
-	int name_length = pos_point - pos_slash - 1;
-	memmove(buffer, buffer + pos_slash + 1, name_length);
-	strcpy(buffer + name_length, ".log.db");
+		int name_length = pos_point - pos_slash - 1;
+		memmove(buffer, buffer + pos_slash + 1, name_length);
+		strcpy(buffer + name_length, ".log.db");
+	}
 	int ret = sqlite3_open(buffer, &sqlite3_t);
 	if (ret != SQLITE_OK) goto err;
 	sqlite3_exec(sqlite3_t, "pragma journal_mode = wal;", 0, 0, 0);

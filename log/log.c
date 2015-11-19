@@ -2,38 +2,40 @@
 
 static void log_null(LOG_ARGS) {}
 
-log_func _log_debug = log_null;
-log_func _log_info = log_null;
-log_func _log_warning = log_null;
-log_func _log_critical = log_null;
-log_func _log_fatal = log_null;
+log_func _log_debug_0_0 = log_null;
+log_func _log_info_0_0 = log_null;
+log_func _log_warning_0_0 = log_null;
+log_func _log_critical_0_0 = log_null;
+log_func _log_fatal_0_0 = log_null;
 
 #ifdef WIN32
 #include <Windows.h>
 
 static HMODULE hDll;
 
-void log_initialize()
+int log_initialize(const char *file)
 {
 	hDll = LoadLibrary("log.dll");
-	if (!hDll) return;
+	if (!hDll) return -1;
 	void *p;
 	p = GetProcAddress(hDll, "log_initialize");
-	int (*i)() = p;
-	if (!i || i()) {
+	int (*i)(const char *) = p;
+	int ret;
+	if (!i || (ret = i(file))) {
 		FreeLibrary(hDll);
-		return;
+		return ret;
 	}
-	p = GetProcAddress(hDll, "log_debug");
-	if (p) _log_debug = p;
-	p = GetProcAddress(hDll, "log_info");
-	if (p) _log_info = p;
-	p = GetProcAddress(hDll, "log_warning");
-	if (p) _log_warning = p;
-	p = GetProcAddress(hDll, "log_critical");
-	if (p) _log_critical = p;
 	p = GetProcAddress(hDll, "log_fatal");
-	if (p) _log_fatal = p;
+	if (p) _log_fatal_0_0 = p;
+	p = GetProcAddress(hDll, "log_critical");
+	if (p) _log_critical_0_0 = p;
+	p = GetProcAddress(hDll, "log_warning");
+	if (p) _log_warning_0_0 = p;
+	p = GetProcAddress(hDll, "log_info");
+	if (p) _log_info_0_0 = p;
+	p = GetProcAddress(hDll, "log_debug");
+	if (p) _log_debug_0_0 = p;
+	return 0;
 }
 
 void log_close()
@@ -63,15 +65,15 @@ void log_initialize()
 		return;
 	}
 	p = dlsym(h, "log_debug");
-	if (p) _log_debug = p;
+	if (p) _log_debug_0_0 = p;
 	p = dlsym(h, "log_info");
-	if (p) _log_info = p;
+	if (p) _log_info_0_0 = p;
 	p = dlsym(h, "log_warning");
-	if (p) _log_warning = p;
+	if (p) _log_warning_0_0 = p;
 	p = dlsym(h, "log_critical");
-	if (p) _log_critical = p;
+	if (p) _log_critical_0_0 = p;
 	p = dlsym(h, "log_fatal");
-	if (p) _log_fatal = p;
+	if (p) _log_fatal_0_0 = p;
 }
 
 void log_close()
