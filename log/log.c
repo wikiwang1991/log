@@ -53,27 +53,29 @@ void log_close()
 
 static void *h;
 
-void log_initialize()
+int log_initialize(const char *file)
 {
 	h = dlopen("liblog.so", RTLD_LAZY);
-	if (!h) return;
+	if (!h) return -1;
 	void *p;
 	p = dlsym(h, "log_initialize");
-	int (*i)() = p;
-	if (!i || i()) {
+	int (*i)(const char *) = p;
+	int ret;
+	if (!i || (ret = i(file))) {
 		dlclose(h);
-		return;
+		return ret;
 	}
-	p = dlsym(h, "log_debug");
-	if (p) _log_debug_0_0 = p;
-	p = dlsym(h, "log_info");
-	if (p) _log_info_0_0 = p;
-	p = dlsym(h, "log_warning");
-	if (p) _log_warning_0_0 = p;
-	p = dlsym(h, "log_critical");
-	if (p) _log_critical_0_0 = p;
 	p = dlsym(h, "log_fatal");
 	if (p) _log_fatal_0_0 = p;
+	p = dlsym(h, "log_critical");
+	if (p) _log_critical_0_0 = p;
+	p = dlsym(h, "log_warning");
+	if (p) _log_warning_0_0 = p;
+	p = dlsym(h, "log_info");
+	if (p) _log_info_0_0 = p;
+	p = dlsym(h, "log_debug");
+	if (p) _log_debug_0_0 = p;
+	return 0;
 }
 
 void log_close()
