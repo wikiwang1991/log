@@ -9,7 +9,9 @@
 #ifdef WIN32
 #include <windows.h>
 
+#if 0
 #define inline __inline
+#endif
 
 CRITICAL_SECTION cs;
 #else

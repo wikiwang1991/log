@@ -30,3 +30,9 @@
 
 # Debug files
 *.dSYM/
+
+.vs/
+Debug/
+Release/
+x64/
+*.user
