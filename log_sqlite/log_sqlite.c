@@ -68,10 +68,10 @@ int log_initialize(const char *file)
 			ti->tm_hour, ti->tm_min, ti->tm_sec,
 			ti->tm_mon + 1, ti->tm_mday, ti->tm_year + 1900);
 	sprintf(buffer, "create table %s(time timestamp default current_timestamp, \
-			level tinyint, function text, line int, msg text);", table);
+			thread int, level tinyint, function text, line int, msg text);", table);
 	ret = sqlite3_exec(sqlite3_t, buffer, 0, 0, 0);
 	if (ret != SQLITE_OK) goto err;
-	sprintf(buffer, "insert into %s(level, function, line, msg) values(?, ?, ?, ?);", table);
+	sprintf(buffer, "insert into %s(thread, level, function, line, msg) values(?, ?, ?, ?, ?);", table);
 	ret = sqlite3_prepare(sqlite3_t, buffer, -1, &sqlite3_stmt_t, 0);
 	if (ret != SQLITE_OK) goto err;
 noerr:
@@ -112,15 +112,20 @@ static inline void unlock()
 #endif
 }
 
+static inline void log_impl_header(int level, const char *function, int line) {
+	sqlite3_bind_int(sqlite3_stmt_t, 1, GetCurrentThreadId());
+	sqlite3_bind_int(sqlite3_stmt_t, 2, level);
+	sqlite3_bind_text(sqlite3_stmt_t, 3, function, -1, SQLITE_STATIC);
+	sqlite3_bind_int(sqlite3_stmt_t, 4, line);
+}
+
 static inline void log_impl_with_msg(int level, const char *function, int line, const char *fmt, va_list vl)
 {
 	char msg[BUFFER_SIZE];
 	vsprintf(msg, fmt, vl);
 	lock();
-	sqlite3_bind_int(sqlite3_stmt_t, 1, level);
-	sqlite3_bind_text(sqlite3_stmt_t, 2, function, -1, SQLITE_STATIC);
-	sqlite3_bind_int(sqlite3_stmt_t, 3, line);
-	sqlite3_bind_text(sqlite3_stmt_t, 4, msg, -1, SQLITE_STATIC);
+	log_impl_header(level, function, line);
+	sqlite3_bind_text(sqlite3_stmt_t, 5, msg, -1, SQLITE_STATIC);
 	sqlite3_step(sqlite3_stmt_t);
 	sqlite3_reset(sqlite3_stmt_t);
 	unlock();
@@ -129,10 +134,8 @@ static inline void log_impl_with_msg(int level, const char *function, int line, 
 static inline void log_impl_without_msg(int level, const char *function, int line)
 {
 	lock();
-	sqlite3_bind_int(sqlite3_stmt_t, 1, level);
-	sqlite3_bind_text(sqlite3_stmt_t, 2, function, -1, SQLITE_STATIC);
-	sqlite3_bind_int(sqlite3_stmt_t, 3, line);
-	sqlite3_bind_null(sqlite3_stmt_t, 4);
+	log_impl_header(level, function, line);
+	sqlite3_bind_null(sqlite3_stmt_t, 5);
 	sqlite3_step(sqlite3_stmt_t);
 	sqlite3_reset(sqlite3_stmt_t);
 	unlock();
