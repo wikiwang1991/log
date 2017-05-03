@@ -1,11 +1,11 @@
 #include "../log/log.h"
-//#include "../test_dll/test_dll.h"
+#include "../test_dll/test_dll.h"
 
 int main()
 {
 	int i = 0;
 	log_initialize(0);
-//	test_dll();
+	test_dll();
 
 	log_debug("Hello debug %d\n", i++);
 	log_info("Hello info %d\n", i++);
@@ -13,10 +13,9 @@ int main()
 	log_critical("Hello critical %d\n", i++);
 	log_fatal("Hello fatal %d\n", i);
 
-//	test_dll();
+	test_dll();
 
 	log_close();
 
 	return 0;
 }
-

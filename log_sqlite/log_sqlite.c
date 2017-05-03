@@ -51,10 +51,10 @@ int log_initialize(const char *file)
 			case '.':
 				pos_point = i;
 				break;
-		}
+			}
 		int name_length = pos_point - pos_slash - 1;
 		memmove(buffer, buffer + pos_slash + 1, name_length);
-		strcpy(buffer + name_length, ".log.db");
+		strcpy(buffer + name_length, ".log.sqlite3");
 	}
 	int ret = sqlite3_open(buffer, &sqlite3_t);
 	if (ret != SQLITE_OK) goto err;
