@@ -36,3 +36,4 @@ Debug/
 Release/
 x64/
 *.user
+*.db

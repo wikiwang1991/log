@@ -4,7 +4,7 @@
 int main()
 {
 	int i = 0;
-	log_initialize();
+	log_initialize(0);
 //	test_dll();
 
 	log_debug("Hello debug %d\n", i++);
