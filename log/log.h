@@ -1,42 +1,89 @@
 #pragma once
 
-#ifdef ENABLE_LOG
+#ifndef LOG_MAX_LEVEL
+#define LOG_MAX_LEVEL	5
 
-#define LOG_ARGS const char *function, int line, const char *fmt, ...
-typedef void (*log_func)(LOG_ARGS);
+#ifndef LOG_LEVEL
+#define LOG_LEVEL LOG_MAX_LEVEL
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern log_func _log_debug_0_0;
-extern log_func _log_info_0_0;
-extern log_func _log_warning_0_0;
-extern log_func _log_critical_0_0;
-extern log_func _log_fatal_0_0;
+#if LOG_LEVEL < LOG_MAX_LEVEL
 
-int log_initialize(const char *file);
-void log_close();
+#define LOG_ARGS const char *function, int line, const char *fmt, ...
+typedef void (*log_func)(LOG_ARGS);
+
+extern log_func _log_func[LOG_MAX_LEVEL];
+
+int log_initialize(const char *uri);
+int log_close();
+
+#define log(level, fmt, ...) _log_func[level](__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+
+#else
+
+#define log_initialize(x)	0
+#define log_close()			0
+
+#define log(level, fmt, ...)
+
+#endif
+
+#if LOG_LEVEL <= 0
+
+#define log_debug(fmt, ...) log(0, fmt, ##__VA_ARGS__)
+
+#else
+
+#define log_debug(fmt, ...)
+
+#endif
+
+#if LOG_LEVEL <= 1
+
+#define log_info(fmt, ...) log(1, fmt, ##__VA_ARGS__)
+
+#else
+
+#define log_info(fmt, ...)
+
+#endif
+
+#if LOG_LEVEL <= 2
+
+#define log_warning(fmt, ...) log(2, fmt, ##__VA_ARGS__)
+
+#else
+
+#define log_warning(fmt, ...)
+
+#endif
+
+#if LOG_LEVEL <= 3
+
+#define log_critical(fmt, ...) log(3, fmt, ##__VA_ARGS__)
+
+#else
+
+#define log_critical(fmt, ...)
+
+#endif
+
+#if LOG_LEVEL <= 4
+
+#define log_fatal(fmt, ...) log(4, fmt, ##__VA_ARGS__)
+
+#else
+
+#define log_fatal(fmt, ...)
+
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#define log_debug(fmt, ...) _log_debug_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_info(fmt, ...) _log_info_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_warning(fmt, ...) _log_warning_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_critical(fmt, ...) _log_critical_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-#define log_fatal(fmt, ...) _log_fatal_0_0(__FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
-
-#else
-
-#define log_initialize(x)
-#define log_close()
-
-#define log_debug(fmt, ...)
-#define log_info(fmt, ...)
-#define log_warning(fmt, ...)
-#define log_critical(fmt, ...)
-#define log_fatal(fmt, ...)
-
-#endif
+#endif // LOG_MAX_LEVEL
