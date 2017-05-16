@@ -2,7 +2,8 @@
 
 static void log_null(LOG_ARGS) {}
 
-log_func _log_func[LOG_MAX_LEVEL] = { log_null };
+log_func _log_func[LOG_MAX_LEVEL] =
+{ log_null, log_null, log_null, log_null, log_null };
 
 #ifdef WIN32
 
