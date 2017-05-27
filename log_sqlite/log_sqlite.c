@@ -21,12 +21,11 @@ pthread_mutex_t mutex;
 
 #endif
 
-static int reference_count = 0;
+static long reference_count = 0;
 static sqlite3 *sqlite3_t;
 static sqlite3_stmt *sqlite3_stmt_t;
 
-static inline void lock()
-{
+static inline void lock() {
 #ifdef WIN32
 	EnterCriticalSection(&cs);
 #else
@@ -34,8 +33,7 @@ static inline void lock()
 #endif
 }
 
-static inline void unlock()
-{
+static inline void unlock() {
 #ifdef WIN32
 	LeaveCriticalSection(&cs);
 #else
@@ -56,8 +54,7 @@ static inline void log_impl_step() {
 }
 
 static inline void log_impl_with_msg(int level, const char *function, int line,
-                                     const char *fmt, va_list vl)
-{
+                                     const char *fmt, va_list vl) {
 	char msg[URI_BUFFER_SIZE];
 	vsprintf(msg, fmt, vl);
 	lock();
@@ -67,8 +64,7 @@ static inline void log_impl_with_msg(int level, const char *function, int line,
 	unlock();
 }
 
-static inline void log_impl_without_msg(int level, const char *function, int line)
-{
+static inline void log_impl_without_msg(int level, const char *function, int line) {
 	lock();
 	log_impl_header(level, function, line);
 	sqlite3_bind_null(sqlite3_stmt_t, 5);
@@ -76,8 +72,7 @@ static inline void log_impl_without_msg(int level, const char *function, int lin
 	unlock();
 }
 
-static void log_debug_impl(LOG_ARGS)
-{
+static void log_debug_impl(LOG_ARGS) {
 	const int level = 0;
 	if (fmt) {
 		va_list vl;
@@ -86,8 +81,7 @@ static void log_debug_impl(LOG_ARGS)
 	} else log_impl_without_msg(level, function, line);
 }
 
-static void log_info_impl(LOG_ARGS)
-{
+static void log_info_impl(LOG_ARGS) {
 	const int level = 1;
 	if (fmt) {
 		va_list vl;
@@ -96,8 +90,7 @@ static void log_info_impl(LOG_ARGS)
 	} else log_impl_without_msg(level, function, line);
 }
 
-static void log_warning_impl(LOG_ARGS)
-{
+static void log_warning_impl(LOG_ARGS) {
 	const int level = 2;
 	if (fmt) {
 		va_list vl;
@@ -106,8 +99,7 @@ static void log_warning_impl(LOG_ARGS)
 	} else log_impl_without_msg(level, function, line);
 }
 
-static void log_critical_impl(LOG_ARGS)
-{
+static void log_critical_impl(LOG_ARGS) {
 	const int level = 3;
 	if (fmt) {
 		va_list vl;
@@ -116,8 +108,7 @@ static void log_critical_impl(LOG_ARGS)
 	} else log_impl_without_msg(level, function, line);
 }
 
-static void log_fatal_impl(LOG_ARGS)
-{
+static void log_fatal_impl(LOG_ARGS) {
 	const int level = 4;
 	if (fmt) {
 		va_list vl;
@@ -126,8 +117,8 @@ static void log_fatal_impl(LOG_ARGS)
 	} else log_impl_without_msg(level, function, line);
 }
 
-int log_initialize(const char *uri, log_func *func_table)
-{
+int log_initialize(const char *uri, log_func *func_table) {
+	
 	if (reference_count) goto noerr;
 	char buffer[URI_BUFFER_SIZE];
 	if (uri) strcpy(buffer, uri);
@@ -136,7 +127,6 @@ int log_initialize(const char *uri, log_func *func_table)
 		DWORD len;
 		len = GetModuleFileName(0, buffer, URI_BUFFER_SIZE);
 		if (!len) return -1;
-		InitializeCriticalSection(&cs);
 #else
 		ssize_t len = readlink("/proc/self/exe", buffer, URI_BUFFER_SIZE);
 		if (len <= 0) return -1;
@@ -157,6 +147,12 @@ int log_initialize(const char *uri, log_func *func_table)
 		memmove(buffer, buffer + pos_slash + 1, name_length);
 		strcpy(buffer + name_length, ".log.sqlite3");
 	}
+#ifdef WIN32
+	InitializeCriticalSection(&cs);
+#else
+	pthread_mutex_init(&mutex, 0);
+#endif
+	lock();
 	int ret = sqlite3_open(buffer, &sqlite3_t);
 	if (ret != SQLITE_OK) goto err;
 	sqlite3_exec(sqlite3_t, "pragma journal_mode = wal;", 0, 0, 0);
@@ -178,28 +174,37 @@ int log_initialize(const char *uri, log_func *func_table)
 		"values(?, ?, ?, ?, ?);", table);
 	ret = sqlite3_prepare(sqlite3_t, buffer, -1, &sqlite3_stmt_t, 0);
 	if (ret != SQLITE_OK) goto err;
-noerr:
-	++reference_count;
 	func_table[0] = log_debug_impl;
 	func_table[1] = log_info_impl;
 	func_table[2] = log_warning_impl;
 	func_table[3] = log_critical_impl;
 	func_table[4] = log_fatal_impl;
-	return 0;
+	unlock();
+noerr:
+
+	return InterlockedIncrement(&reference_count);
+
 err:
 	sqlite3_close(sqlite3_t);
+	unlock();
 	return ret;
 }
 
 int log_close() {
-	if (!--reference_count) {
+	long rc;
+
+	rc = InterlockedDecrement(&reference_count);
+
+	if (!rc) {
+		lock();
 		sqlite3_finalize(sqlite3_stmt_t);
 		sqlite3_close(sqlite3_t);
+		unlock();
 #ifdef WIN32
 		DeleteCriticalSection(&cs);
 #else
 		pthread_mutex_destroy(&mutex);
 #endif
 	}
-	return reference_count;
+	return rc;
 }
