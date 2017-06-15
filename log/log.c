@@ -2,8 +2,7 @@
 
 static void log_null(LOG_ARGS) {}
 
-log_func _log_func[LOG_MAX_LEVEL] =
-{ log_null, log_null, log_null, log_null, log_null };
+log_func _log_func = log_null;
 
 #ifdef WIN32
 
@@ -16,9 +15,9 @@ int log_initialize(const char *uri) {
 	if (!hDll) return -1;
 	void *p;
 	p = GetProcAddress(hDll, "log_initialize");
-	int (*i)(const char *, log_func *func_table) = p;
+	int (*i)(const char *, log_func *func) = p;
 	int ret;
-	if (!i || (ret = i(uri, _log_func)) < 0) {
+	if (!i || (ret = i(uri, &_log_func)) < 0) {
 		FreeLibrary(hDll);
 		hDll = 0;
 	}

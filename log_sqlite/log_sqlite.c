@@ -41,11 +41,12 @@ static inline void unlock() {
 #endif
 }
 
-static inline void log_impl_header(int level, const char *function, int line) {
+static inline void log_impl_header(int level, void *object, const char *function, int line) {
 	sqlite3_bind_int(sqlite3_stmt_t, 1, GetCurrentThreadId());
 	sqlite3_bind_int(sqlite3_stmt_t, 2, level);
-	sqlite3_bind_text(sqlite3_stmt_t, 3, function, -1, SQLITE_STATIC);
-	sqlite3_bind_int(sqlite3_stmt_t, 4, line);
+	sqlite3_bind_int64(sqlite3_stmt_t, 3, object);
+	sqlite3_bind_text(sqlite3_stmt_t, 4, function, -1, SQLITE_STATIC);
+	sqlite3_bind_int(sqlite3_stmt_t, 5, line);
 }
 
 static inline void log_impl_step() {
@@ -53,71 +54,34 @@ static inline void log_impl_step() {
 	sqlite3_reset(sqlite3_stmt_t);
 }
 
-static inline void log_impl_with_msg(int level, const char *function, int line,
+static inline void log_impl_with_msg(int level, void *object, const char *function, int line,
                                      const char *fmt, va_list vl) {
 	char msg[URI_BUFFER_SIZE];
 	vsprintf(msg, fmt, vl);
 	lock();
-	log_impl_header(level, function, line);
-	sqlite3_bind_text(sqlite3_stmt_t, 5, msg, -1, SQLITE_STATIC);
+	log_impl_header(level, object, function, line);
+	sqlite3_bind_text(sqlite3_stmt_t, 6, msg, -1, SQLITE_STATIC);
 	log_impl_step();
 	unlock();
 }
 
-static inline void log_impl_without_msg(int level, const char *function, int line) {
+static inline void log_impl_without_msg(int level, void *object, const char *function, int line) {
 	lock();
-	log_impl_header(level, function, line);
-	sqlite3_bind_null(sqlite3_stmt_t, 5);
+	log_impl_header(level, object, function, line);
+	sqlite3_bind_null(sqlite3_stmt_t, 6);
 	log_impl_step();
 	unlock();
 }
 
-static void log_debug_impl(LOG_ARGS) {
-	const int level = 0;
+static void log_impl(LOG_ARGS) {
 	if (fmt) {
 		va_list vl;
 		va_start(vl, fmt);
-		log_impl_with_msg(level, function, line, fmt, vl);
-	} else log_impl_without_msg(level, function, line);
+		log_impl_with_msg(level, object, function, line, fmt, vl);
+	} else log_impl_without_msg(level, object, function, line);
 }
 
-static void log_info_impl(LOG_ARGS) {
-	const int level = 1;
-	if (fmt) {
-		va_list vl;
-		va_start(vl, fmt);
-		log_impl_with_msg(level, function, line, fmt, vl);
-	} else log_impl_without_msg(level, function, line);
-}
-
-static void log_warning_impl(LOG_ARGS) {
-	const int level = 2;
-	if (fmt) {
-		va_list vl;
-		va_start(vl, fmt);
-		log_impl_with_msg(level, function, line, fmt, vl);
-	} else log_impl_without_msg(level, function, line);
-}
-
-static void log_critical_impl(LOG_ARGS) {
-	const int level = 3;
-	if (fmt) {
-		va_list vl;
-		va_start(vl, fmt);
-		log_impl_with_msg(level, function, line, fmt, vl);
-	} else log_impl_without_msg(level, function, line);
-}
-
-static void log_fatal_impl(LOG_ARGS) {
-	const int level = 4;
-	if (fmt) {
-		va_list vl;
-		va_start(vl, fmt);
-		log_impl_with_msg(level, function, line, fmt, vl);
-	} else log_impl_without_msg(level, function, line);
-}
-
-int log_initialize(const char *uri, log_func *func_table) {
+int log_initialize(const char *uri, log_func *func) {
 	
 	if (reference_count) goto noerr;
 	char buffer[URI_BUFFER_SIZE];
@@ -166,19 +130,15 @@ int log_initialize(const char *uri, log_func *func_table) {
 		ti->tm_mday, ti->tm_hour, ti->tm_min, ti->tm_sec);
 	sprintf(buffer, "create table %s(time datetime default"
 		"(strftime('%%Y-%%m-%%d %%H:%%M:%%f', 'now')), "
-		"thread int, level tinyint, function text, line int, message text);",
+		"thread int, level tinyint, object int, function text, line int, message text);",
 		table);
 	ret = sqlite3_exec(sqlite3_t, buffer, 0, 0, 0);
 	if (ret != SQLITE_OK) goto err;
-	sprintf(buffer, "insert into %s(thread, level, function, line, message) "
-		"values(?, ?, ?, ?, ?);", table);
+	sprintf(buffer, "insert into %s(thread, level, object, function, line, message) "
+		"values(?, ?, ?, ?, ?, ?);", table);
 	ret = sqlite3_prepare(sqlite3_t, buffer, -1, &sqlite3_stmt_t, 0);
 	if (ret != SQLITE_OK) goto err;
-	func_table[0] = log_debug_impl;
-	func_table[1] = log_info_impl;
-	func_table[2] = log_warning_impl;
-	func_table[3] = log_critical_impl;
-	func_table[4] = log_fatal_impl;
+	*func = log_impl;
 	unlock();
 noerr:
 
