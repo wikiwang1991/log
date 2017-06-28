@@ -116,7 +116,6 @@ int log_initialize(const char *uri, log_func *func) {
 #else
 	pthread_mutex_init(&mutex, 0);
 #endif
-	lock();
 	int ret = sqlite3_open(buffer, &sqlite3_t);
 	if (ret != SQLITE_OK) goto err;
 	sqlite3_exec(sqlite3_t, "pragma journal_mode = wal;", 0, 0, 0);
@@ -139,14 +138,12 @@ int log_initialize(const char *uri, log_func *func) {
 	ret = sqlite3_prepare(sqlite3_t, buffer, -1, &sqlite3_stmt_t, 0);
 	if (ret != SQLITE_OK) goto err;
 	*func = log_impl;
-	unlock();
 noerr:
 
 	return InterlockedIncrement(&reference_count);
 
 err:
 	sqlite3_close(sqlite3_t);
-	unlock();
 	return ret;
 }
 
