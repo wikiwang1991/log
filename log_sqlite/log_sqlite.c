@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#define URI_BUFFER_SIZE 1024
+#define BUFFER_SIZE 4096
 
 #ifdef WIN32
 
 #include <windows.h>
 
-CRITICAL_SECTION cs;
+static CRITICAL_SECTION cs;
 
 #else
 
@@ -44,7 +44,7 @@ static inline void unlock() {
 static inline void log_impl_header(int level, void *object, const char *function, int line) {
 	sqlite3_bind_int(sqlite3_stmt_t, 1, GetCurrentThreadId());
 	sqlite3_bind_int(sqlite3_stmt_t, 2, level);
-	sqlite3_bind_int64(sqlite3_stmt_t, 3, object);
+	sqlite3_bind_int64(sqlite3_stmt_t, 3, (sqlite3_int64)object);
 	sqlite3_bind_text(sqlite3_stmt_t, 4, function, -1, SQLITE_STATIC);
 	sqlite3_bind_int(sqlite3_stmt_t, 5, line);
 }
@@ -56,7 +56,7 @@ static inline void log_impl_step() {
 
 static inline void log_impl_with_msg(int level, void *object, const char *function, int line,
                                      const char *fmt, va_list vl) {
-	char msg[URI_BUFFER_SIZE];
+	char msg[BUFFER_SIZE];
 	vsprintf(msg, fmt, vl);
 	lock();
 	log_impl_header(level, object, function, line);
@@ -81,23 +81,22 @@ static void log_impl(LOG_ARGS) {
 	} else log_impl_without_msg(level, object, function, line);
 }
 
-int log_initialize(const char *uri, log_func *func) {
-	
+int log_initialize_impl(const char *uri, log_func *func) {
 	if (reference_count) goto noerr;
-	char buffer[URI_BUFFER_SIZE];
+	char buffer[BUFFER_SIZE];
 	if (uri) strcpy(buffer, uri);
 	else {
 #ifdef WIN32
 		DWORD len;
-		len = GetModuleFileName(0, buffer, URI_BUFFER_SIZE);
+		len = GetModuleFileName(0, buffer, BUFFER_SIZE);
 		if (!len) return -1;
 #else
-		ssize_t len = readlink("/proc/self/exe", buffer, URI_BUFFER_SIZE);
+		ssize_t len = readlink("/proc/self/exe", buffer, BUFFER_SIZE);
 		if (len <= 0) return -1;
 		pthread_mutex_init(&mutex, 0);
 #endif
 		int pos_slash, pos_point = len;
-		for (int i = 0; i < len; ++i)
+		for (int i = 0; i < (int)len; ++i)
 			switch (buffer[i]) {
 			case '\\':
 			case '/':
@@ -139,24 +138,17 @@ int log_initialize(const char *uri, log_func *func) {
 	if (ret != SQLITE_OK) goto err;
 	*func = log_impl;
 noerr:
-
 	return InterlockedIncrement(&reference_count);
-
 err:
 	sqlite3_close(sqlite3_t);
 	return ret;
 }
 
-int log_close() {
-	long rc;
-
-	rc = InterlockedDecrement(&reference_count);
-
+int log_close_impl() {
+	long rc = InterlockedDecrement(&reference_count);
 	if (!rc) {
-		lock();
 		sqlite3_finalize(sqlite3_stmt_t);
 		sqlite3_close(sqlite3_t);
-		unlock();
 #ifdef WIN32
 		DeleteCriticalSection(&cs);
 #else

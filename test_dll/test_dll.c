@@ -5,7 +5,7 @@ void test_dll()
 {
 	log_initialize(0);
 
-	log_debug("test_dll");
+	logg_debug("test_dll");
 
 	log_close();
 }

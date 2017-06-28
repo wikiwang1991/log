@@ -14,7 +14,7 @@ int log_initialize(const char *uri) {
 	if (!hDll) hDll = LoadLibrary("log.dll");
 	if (!hDll) return -1;
 	void *p;
-	p = GetProcAddress(hDll, "log_initialize");
+	p = GetProcAddress(hDll, "log_initialize_impl");
 	int (*i)(const char *, log_func *func) = p;
 	int ret;
 	if (!i || (ret = i(uri, &_log_func)) < 0) {
@@ -27,7 +27,7 @@ int log_initialize(const char *uri) {
 int log_close() {
 	if (!hDll) return 1;
 	void *p;
-	p = GetProcAddress(hDll, "log_close");
+	p = GetProcAddress(hDll, "log_close_impl");
 	if (!p) return -1;
 	int (*i)() = p;
 	int ret = i();

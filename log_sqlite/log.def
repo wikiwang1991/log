@@ -1,3 +1,3 @@
 EXPORTS
-	log_initialize
-	log_close
+	log_initialize_impl
+	log_close_impl
