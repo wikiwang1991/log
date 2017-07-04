@@ -35,7 +35,7 @@ static inline void log_impl_with_msg(int level, void *object, const char *functi
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%03d\t",
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09d\t",
 			t->tm_year + 1900, t->tm_mon + 1,
 			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
 	char msg[BUFFER_SIZE];
@@ -52,7 +52,7 @@ static inline void log_impl_without_msg(int level, void *object, const char *fun
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%03d\t",
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09d\t",
 			t->tm_year + 1900, t->tm_mon + 1,
 			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
 	lock();
