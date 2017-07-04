@@ -3,46 +3,29 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
-
-#define BUFFER_SIZE 4096
+#include <mutex>
+#include <thread>
 
 #ifdef WIN32
-
-#include <windows.h>
-
-static CRITICAL_SECTION cs;
-
-#else
-
-#include <pthread.h>
-#include <unistd.h>
-
-pthread_mutex_t mutex;
-
+#include <Windows.h>
 #endif
+
+static constexpr size_t BUFFER_SIZE = 4096;
+
+static std::mutex mutex;
 
 static long reference_count = 0;
 static sqlite3 *sqlite3_t;
 static sqlite3_stmt *sqlite3_stmt_t;
 
-static inline void lock() {
-#ifdef WIN32
-	EnterCriticalSection(&cs);
-#else
-	pthread_mutex_lock(&mutex);
-#endif
-}
+static inline void lock()
+{ mutex.lock(); }
 
-static inline void unlock() {
-#ifdef WIN32
-	LeaveCriticalSection(&cs);
-#else
-	pthread_mutex_unlock(&mutex);
-#endif
-}
+static inline void unlock()
+{ mutex.unlock(); }
 
 static inline void log_impl_header(int level, void *object, const char *function, int line) {
-	sqlite3_bind_int(sqlite3_stmt_t, 1, GetCurrentThreadId());
+	sqlite3_bind_int64(sqlite3_stmt_t, 1, std::hash<std::thread::id>()(std::this_thread::get_id()));
 	sqlite3_bind_int(sqlite3_stmt_t, 2, level);
 	sqlite3_bind_int64(sqlite3_stmt_t, 3, (sqlite3_int64)object);
 	sqlite3_bind_text(sqlite3_stmt_t, 4, function, -1, SQLITE_STATIC);
@@ -82,6 +65,7 @@ static void log_impl(LOG_ARGS) {
 }
 
 int log_initialize_impl(const char *uri, log_func *func) {
+	lock();
 	if (reference_count) goto noerr;
 	char buffer[BUFFER_SIZE];
 	if (uri) strcpy(buffer, uri);
@@ -110,13 +94,9 @@ int log_initialize_impl(const char *uri, log_func *func) {
 		memmove(buffer, buffer + pos_slash + 1, name_length);
 		strcpy(buffer + name_length, ".log.sqlite3");
 	}
-#ifdef WIN32
-	InitializeCriticalSection(&cs);
-#else
-	pthread_mutex_init(&mutex, 0);
-#endif
+
 	int ret = sqlite3_open(buffer, &sqlite3_t);
-	if (ret != SQLITE_OK) goto err;
+	if (ret != SQLITE_OK) goto over;
 	sqlite3_exec(sqlite3_t, "pragma journal_mode = wal;", 0, 0, 0);
 	sqlite3_exec(sqlite3_t, "pragma synchronous = normal;", 0, 0, 0);
 	time_t t;
@@ -138,22 +118,22 @@ int log_initialize_impl(const char *uri, log_func *func) {
 	if (ret != SQLITE_OK) goto err;
 	*func = log_impl;
 noerr:
-	return InterlockedIncrement(&reference_count);
+	ret = ++reference_count;
+	goto over;
 err:
 	sqlite3_close(sqlite3_t);
+over:
+	unlock();
 	return ret;
 }
 
 int log_close_impl() {
-	long rc = InterlockedDecrement(&reference_count);
+	lock();
+	long rc = --reference_count;
 	if (!rc) {
 		sqlite3_finalize(sqlite3_stmt_t);
 		sqlite3_close(sqlite3_t);
-#ifdef WIN32
-		DeleteCriticalSection(&cs);
-#else
-		pthread_mutex_destroy(&mutex);
-#endif
 	}
+	unlock();
 	return rc;
 }

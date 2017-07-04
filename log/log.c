@@ -49,34 +49,29 @@ int log_initialize(const char *uri)
 	h = dlopen("liblog.so", RTLD_LAZY);
 	if (!h) return -1;
 	void *p;
-	p = dlsym(h, "log_initialize");
-	int (*i)(const char *) = p;
+	p = dlsym(h, "log_initialize_impl");
+	int (*i)(const char *, log_func *func) = p;
 	int ret;
-	if (!i || (ret = i(uri))) {
+	if (!i || (ret = i(uri, &_log_func))) {
 		dlclose(h);
-		return ret;
+		h = 0;
 	}
-	p = dlsym(h, "log_fatal");
-	if (p) _log_fatal_0_0 = p;
-	p = dlsym(h, "log_critical");
-	if (p) _log_critical_0_0 = p;
-	p = dlsym(h, "log_warning");
-	if (p) _log_warning_0_0 = p;
-	p = dlsym(h, "log_info");
-	if (p) _log_info_0_0 = p;
-	p = dlsym(h, "log_debug");
-	if (p) _log_debug_0_0 = p;
-	return 0;
+	return ret;
 }
 
-void log_close()
+int log_close()
 {
+	if (!h) return 1;
 	void *p;
-	p = dlsym(h, "log_close");
-	if (!p) return;
-	void (*i)() = p;
-	i();
-	dlclose(h);
+	p = dlsym(h, "log_close_impl");
+	if (!p) return -1;
+	int (*i)() = p;
+	int ret = i();
+	if (!ret) {
+		dlclose(h);
+		h = 0;
+	}
+	return ret;
 }
 
 #endif

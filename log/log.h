@@ -33,7 +33,7 @@ int log_close();
 #define log_initialize(x)	0
 #define log_close()			0
 
-#define log(level, fmt, ...)
+#define logg(level, fmt, ...)
 #define logm(level, fmt, ...)
 
 #endif
