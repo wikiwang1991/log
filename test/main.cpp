@@ -6,11 +6,11 @@
 void f()
 {
 	for (int i = 0; i < 100; ++i) {
-		logg_debug("Hello debug %d\n", i);
-		logg_info("Hello info %d\n", i);
-		logg_warning("Hello warning %d\n", i);
-		logg_critical("Hello critical %d\n", i);
-		logg_fatal("Hello fatal %d\n", i);
+		logg_debug("Hello debug %d", i);
+		logg_info("Hello info %d", i);
+		logg_warning("Hello warning %d", i);
+		logg_critical("Hello critical %d", i);
+		logg_fatal("Hello fatal %d", i);
 	}
 }
 

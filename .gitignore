@@ -37,3 +37,4 @@ Release/
 x64/
 *.user
 *.sqlite3
+*.txt

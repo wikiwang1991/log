@@ -42,11 +42,11 @@ int log_close() {
 
 #include <dlfcn.h>
 
-static void *h;
+static void *h = 0;
 
 int log_initialize(const char *uri)
 {
-	h = dlopen("liblog.so", RTLD_LAZY);
+	if (!h) h = dlopen("liblog.so", RTLD_LAZY);
 	if (!h) return -1;
 	void *p;
 	p = dlsym(h, "log_initialize_impl");
