@@ -1,8 +1,0 @@
-lib_LTLIBRARIES = liblog.la
-
-AM_CFLAGS = -std=c99 -lpthread
-
-liblog_la_SOURCES = log_sqlite.c sqlite3.c
-
-noinst_HEADERS = sqlite3.h
-

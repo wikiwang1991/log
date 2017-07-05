@@ -1,6 +1,0 @@
-lib_LIBRARIES = liblog.a
-
-liblog_a_SOURCES = log.c
-
-include_HEADERS = log.h
-
