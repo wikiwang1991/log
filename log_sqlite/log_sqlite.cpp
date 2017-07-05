@@ -9,6 +9,12 @@
 
 #ifdef WIN32
 #include <Windows.h>
+#else
+#include <unistd.h>
+extern "C" {
+int log_initialize_impl(const char *uri, log_func *func);
+int log_close_impl();
+}
 #endif
 
 static constexpr size_t BUFFER_SIZE = 4096;
@@ -49,7 +55,7 @@ static inline void log_impl_with_msg(int level, void *object, const char *functi
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09d\t",
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t",
 			t->tm_year + 1900, t->tm_mon + 1,
 			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
 	char msg[BUFFER_SIZE];
@@ -66,7 +72,7 @@ static inline void log_impl_without_msg(int level, void *object, const char *fun
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09d\t",
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t",
 			t->tm_year + 1900, t->tm_mon + 1,
 			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
 	lock();
@@ -85,7 +91,10 @@ static void log_impl(LOG_ARGS) {
 }
 
 int log_initialize_impl(const char *uri, log_func *func) {
-	lock();
+	struct tm *ti;
+	int ret;
+
+	lock();	
 	if (reference_count) goto noerr;
 	char buffer[BUFFER_SIZE];
 	if (uri) strcpy(buffer, uri);
@@ -97,7 +106,6 @@ int log_initialize_impl(const char *uri, log_func *func) {
 #else
 		ssize_t len = readlink("/proc/self/exe", buffer, BUFFER_SIZE);
 		if (len <= 0) return -1;
-		pthread_mutex_init(&mutex, 0);
 #endif
 		int pos_slash, pos_point = len;
 		for (int i = 0; i < (int)len; ++i)
@@ -114,14 +122,13 @@ int log_initialize_impl(const char *uri, log_func *func) {
 		memmove(buffer, buffer + pos_slash + 1, name_length);
 		strcpy(buffer + name_length, ".log.sqlite3");
 	}
-
-	int ret = sqlite3_open(buffer, &sqlite3_t);
+	ret = sqlite3_open(buffer, &sqlite3_t);
 	if (ret != SQLITE_OK) goto over;
 	sqlite3_exec(sqlite3_t, "pragma journal_mode = wal;", 0, 0, 0);
 	sqlite3_exec(sqlite3_t, "pragma synchronous = normal;", 0, 0, 0);
 	time_t t;
 	time(&t);
-	struct tm *ti = gmtime(&t);
+	ti = gmtime(&t);
 	char table[32];
 	sprintf(table, "[%d-%02d-%02d %02d:%02d:%02d]",
 		ti->tm_year + 1900, ti->tm_mon + 1,

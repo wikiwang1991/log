@@ -1,7 +1,4 @@
 #include "../log/log.h"
-//#include "../test_dll/test_dll.h"
-
-#include <thread>
 
 void f()
 {
@@ -16,24 +13,9 @@ void f()
 
 int main()
 {
-	int i = 0;
 	log_initialize(0);
-//	test_dll();
 
-	constexpr size_t threads = 8;
-	std::thread t[threads];
-
-	for (size_t i = 0; i < threads; ++i)
-	{
-		t[i] = std::thread(f);
-	}
-
-	for (size_t i = 0; i < threads; ++i)
-	{
-		t[i].join();
-	}
-
-//	test_dll();
+	f();
 
 	log_close();
 

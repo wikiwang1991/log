@@ -5,9 +5,16 @@
 #include <string.h>
 #include <mutex>
 #include <thread>
+#include <cstdarg>
 
 #ifdef _WINDOWS
 #include <Windows.h>
+#else
+#include <unistd.h>
+extern "C" {
+int log_initialize_impl(const char *uri, log_func *func);
+int log_close_impl();
+}
 #endif
 
 static constexpr size_t BUFFER_SIZE = 4096;
@@ -35,7 +42,7 @@ static inline void log_impl_with_msg(int level, void *object, const char *functi
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09d\t",
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t",
 			t->tm_year + 1900, t->tm_mon + 1,
 			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
 	char msg[BUFFER_SIZE];
@@ -52,7 +59,7 @@ static inline void log_impl_without_msg(int level, void *object, const char *fun
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09d\t",
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t",
 			t->tm_year + 1900, t->tm_mon + 1,
 			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
 	lock();
@@ -70,6 +77,7 @@ static void log_impl(LOG_ARGS) {
 }
 
 int log_initialize_impl(const char *uri, log_func *func) {
+	struct tm *ti;
 	int ret = -1;
 	lock();
 	if (reference_count) goto noerr;
@@ -86,7 +94,6 @@ int log_initialize_impl(const char *uri, log_func *func) {
 #else
 		ssize_t len = readlink("/proc/self/exe", buffer, BUFFER_SIZE);
 		if (len <= 0) return -1;
-		pthread_mutex_init(&mutex, 0);
 #endif
 		int pos_slash, pos_point = len;
 		for (int i = 0; i < (int)len; ++i)
@@ -105,7 +112,7 @@ int log_initialize_impl(const char *uri, log_func *func) {
 
 	time_t t;
 	time(&t);
-	struct tm *ti = gmtime(&t);
+	ti = gmtime(&t);
 	sprintf(buffer + name_length, " [%d-%02d-%02d %02d-%02d-%02d].txt",
 			ti->tm_year + 1900, ti->tm_mon + 1,
 			ti->tm_mday, ti->tm_hour, ti->tm_min, ti->tm_sec);

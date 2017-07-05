@@ -46,13 +46,13 @@ static void *h = 0;
 
 int log_initialize(const char *uri)
 {
-	if (!h) h = dlopen("liblog.so", RTLD_LAZY);
+	if (!h) h = dlopen("./liblog.so", RTLD_LAZY);
 	if (!h) return -1;
 	void *p;
-	p = dlsym(h, "log_initialize_impl");
+    p = dlsym(h, "log_initialize_impl");
 	int (*i)(const char *, log_func *func) = p;
 	int ret;
-	if (!i || (ret = i(uri, &_log_func))) {
+    if (!i || (ret = i(uri, &_log_func)) < 0) {
 		dlclose(h);
 		h = 0;
 	}
