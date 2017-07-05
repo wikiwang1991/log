@@ -20,8 +20,6 @@ Any contribute is welcome!
 
 	#include <log/log.h>
 
-	#include <thread>
-
 	class A {
 	public:
 		A() {
