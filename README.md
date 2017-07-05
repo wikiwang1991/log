@@ -25,7 +25,7 @@ Any contribute is welcome!
 		A() {
 			logm_debug("A construct");
 		}
-	}
+	};
 
 	int main()
 	{
@@ -39,3 +39,8 @@ Any contribute is welcome!
 
 		return 0;
 	}
+
+| time | thread | level | object | function | line | message |
+| - | - | - | - | - | - | - |
+| 2017-07-05 08:43:42.897137900 | 29232 | 0 | 000000F8B2CFFA40 | A::A | 8 | A construct |
+| 2017-07-05 08:43:42.897172900 | 29232 | 1 | 0000000000000000 | main | 18 | A 000000F8B2CFFA40 constructed |
