@@ -1,4 +1,4 @@
-# log
+# log [![Build Status](https://travis-ci.org/wwqwwqwd/log.svg?branch=master)](https://travis-ci.org/wwqwwqwd/log) [![Coverage Status](https://coveralls.io/repos/github/wwqwwqwd/log/badge.svg?branch=master)](https://coveralls.io/github/wwqwwqwd/log?branch=master)
 
 A lightweight & extensible logging framework for C/C++.
 
