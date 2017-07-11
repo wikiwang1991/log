@@ -7,4 +7,4 @@ add_definitions(-DLOG_LEVEL=0)
 
 add_executable(log_test main.cpp)
 
-target_link_libraries(log_test log ${CMAKE_DL_LIBS})
+target_link_libraries(log_test log)
