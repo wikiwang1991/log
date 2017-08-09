@@ -1,11 +1,11 @@
-#include <log.h>
 #include "sqlite3.h"
-#include <time.h>
+#include <log.h>
+#include <mutex>
+#include <sstream>
 #include <stdio.h>
 #include <string.h>
-#include <mutex>
 #include <thread>
-#include <sstream>
+#include <time.h>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -25,13 +25,12 @@ static long reference_count = 0;
 static sqlite3 *sqlite3_t;
 static sqlite3_stmt *sqlite3_stmt_t;
 
-static inline void lock()
-{ mutex.lock(); }
+static inline void lock() { mutex.lock(); }
 
-static inline void unlock()
-{ mutex.unlock(); }
+static inline void unlock() { mutex.unlock(); }
 
-static inline void log_impl_header(const char *time, int level, void *object, const char *function, int line) {
+static inline void log_impl_header(const char *time, int level, void *object,
+                                   const char *function, int line) {
 	sqlite3_bind_text(sqlite3_stmt_t, 1, time, -1, SQLITE_STATIC);
 	std::stringstream s;
 	s << std::this_thread::get_id();
@@ -49,15 +48,16 @@ static inline void log_impl_step() {
 	sqlite3_reset(sqlite3_stmt_t);
 }
 
-static inline void log_impl_with_msg(int level, void *object, const char *function, int line,
+static inline void log_impl_with_msg(int level, void *object,
+                                     const char *function, int line,
                                      const char *fmt, va_list vl) {
 	timespec ts;
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t",
-			t->tm_year + 1900, t->tm_mon + 1,
-			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t", t->tm_year + 1900,
+	        t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,
+	        ts.tv_nsec);
 	char msg[BUFFER_SIZE];
 	vsprintf(msg, fmt, vl);
 	lock();
@@ -67,14 +67,15 @@ static inline void log_impl_with_msg(int level, void *object, const char *functi
 	unlock();
 }
 
-static inline void log_impl_without_msg(int level, void *object, const char *function, int line) {
+static inline void log_impl_without_msg(int level, void *object,
+                                        const char *function, int line) {
 	timespec ts;
 	timespec_get(&ts, TIME_UTC);
 	tm *t = gmtime(&ts.tv_sec);
 	char time[32];
-	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t",
-			t->tm_year + 1900, t->tm_mon + 1,
-			t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, ts.tv_nsec);
+	sprintf(time, "%d-%02d-%02d %02d:%02d:%02d.%09ld\t", t->tm_year + 1900,
+	        t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,
+	        ts.tv_nsec);
 	lock();
 	log_impl_header(time, level, object, function, line);
 	sqlite3_bind_null(sqlite3_stmt_t, 7);
@@ -87,17 +88,19 @@ static void log_impl(LOG_ARGS) {
 		va_list vl;
 		va_start(vl, fmt);
 		log_impl_with_msg(level, object, function, line, fmt, vl);
-	} else log_impl_without_msg(level, object, function, line);
+	} else
+		log_impl_without_msg(level, object, function, line);
 }
 
 int log_initialize_impl(const char *uri, log_func *func) {
 	struct tm *ti;
 	int ret;
 
-	lock();	
+	lock();
 	if (reference_count) goto noerr;
 	char buffer[BUFFER_SIZE];
-	if (uri) strcpy(buffer, uri);
+	if (uri)
+		strcpy(buffer, uri);
 	else {
 #ifdef WIN32
 		DWORD len;
@@ -108,15 +111,10 @@ int log_initialize_impl(const char *uri, log_func *func) {
 		if (len <= 0) return -1;
 #endif
 		int pos_slash, pos_point = len;
-		for (int i = 0; i < (int)len; ++i)
-			switch (buffer[i]) {
+		for (int i = 0; i < (int)len; ++i) switch (buffer[i]) {
 			case '\\':
-			case '/':
-				pos_slash = i;
-				break;
-			case '.':
-				pos_point = i;
-				break;
+			case '/': pos_slash = i; break;
+			case '.': pos_point = i; break;
 			}
 		int name_length = pos_point - pos_slash - 1;
 		memmove(buffer, buffer + pos_slash + 1, name_length);
@@ -130,20 +128,24 @@ int log_initialize_impl(const char *uri, log_func *func) {
 	time(&t);
 	ti = gmtime(&t);
 	char table[32];
-	sprintf(table, "[%d-%02d-%02d %02d:%02d:%02d]",
-		ti->tm_year + 1900, ti->tm_mon + 1,
-		ti->tm_mday, ti->tm_hour, ti->tm_min, ti->tm_sec);
-	sprintf(buffer, "create table %s(time text,"
-		"thread int, level tinyint, object int, function text, line int, message text);",
-		table);
+	sprintf(table, "[%d-%02d-%02d %02d:%02d:%02d]", ti->tm_year + 1900,
+	        ti->tm_mon + 1, ti->tm_mday, ti->tm_hour, ti->tm_min, ti->tm_sec);
+	sprintf(buffer,
+	        "create table %s(time text,"
+	        "thread int, level tinyint, object int, function text, line int, "
+	        "message text);",
+	        table);
 	ret = sqlite3_exec(sqlite3_t, buffer, 0, 0, 0);
 	if (ret != SQLITE_OK) goto err;
-	sprintf(buffer, "insert into %s(time, thread, level, object, function, line, message) "
-		"values(?, ?, ?, ?, ?, ?, ?);", table);
+	sprintf(
+	    buffer,
+	    "insert into %s(time, thread, level, object, function, line, message) "
+	    "values(?, ?, ?, ?, ?, ?, ?);",
+	    table);
 	ret = sqlite3_prepare(sqlite3_t, buffer, -1, &sqlite3_stmt_t, 0);
 	if (ret != SQLITE_OK) goto err;
-	*func = log_impl;
 noerr:
+	*func = log_impl;
 	ret = ++reference_count;
 	goto over;
 err:
