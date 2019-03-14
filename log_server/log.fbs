@@ -1,0 +1,31 @@
+namespace log;
+
+table Log {
+    time        : uint64;
+    level       : ubyte;
+    filter      : uint64;
+    object      : uint64;
+    function    : string;
+    line        : uint32;
+    thread      : uint64;
+    msg         : string;
+}
+
+table LogConfig {
+    level       : ubyte;
+    filter      : uint64;
+    object      : uint64;
+    function    : string;
+    line        : uint32;
+    thread      : uint64;
+    regexp      : string;
+}
+
+union Msg { Log, LogConfig }
+
+table Buffer {
+    msg         : Msg;
+}
+
+root_type Buffer;
+

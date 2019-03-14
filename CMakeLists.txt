@@ -4,5 +4,6 @@ project(log)
 add_subdirectory(log)
 add_subdirectory(log_sqlite)
 add_subdirectory(log_txt)
+add_subdirectory(log_server)
 
 add_subdirectory(test)
